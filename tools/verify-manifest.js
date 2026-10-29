@@ -22,7 +22,6 @@ function readText(rel, label) {
   return fs.readFileSync(path.join(ROOT, rel), "utf8");
 }
 
-/* ------------------------------------------------------------- manifest */
 let manifest = null;
 const manifestText = readText("manifest.json", "manifest");
 if (manifestText !== null) {
@@ -88,7 +87,6 @@ if (manifest) {
     "permissions still minimal (storage only): " + JSON.stringify(manifest.permissions));
 }
 
-/* ---------------------------------------------------------------- icons */
 function readPng(buf) {
   const SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   if (buf.length < 8 || !buf.subarray(0, 8).equals(SIG)) return null;
@@ -136,7 +134,6 @@ function zlibCrc32(buf) {
   return (crc ^ -1) >>> 0;
 }
 
-/* ------------------------------------------------------------- popup ids */
 const popupHtml = readText("popup.html", "popup.html");
 const popupJs = readText("popup.js", "popup.js");
 if (popupHtml !== null && popupJs !== null) {
@@ -154,7 +151,6 @@ for (const f of ["content.js", "content.css", "popup.css", "popup.html", "popup.
   check(isFile(f), "file present: " + f);
 }
 
-/* ------------------------------------------------------------- palette */
 /* The redesign is monochrome on purpose: every colour literal in the two
    stylesheets must be a grey (r == g == b). */
 function isMonochrome(css) {
@@ -181,7 +177,6 @@ for (const css of ["popup.css", "content.css"]) {
   check(bad.length === 0, css + " uses a monochrome palette only" + (bad.length ? " (found " + bad.join(", ") + ")" : ""));
 }
 
-/* ---------------------------------------------------------- consistency */
 const version = manifest ? manifest.version : "";
 if (popupHtml !== null) check(popupHtml.includes("v" + version), "popup footer shows v" + version);
 const contentSrc = readText("content.js", "content.js");
@@ -189,6 +184,8 @@ if (contentSrc !== null) check(contentSrc.includes("v" + version), "content.js h
 const readme = readText("README.md", "README.md");
 if (readme !== null) {
   check(readme.includes("v" + version), "README mentions v" + version);
+  check(/## Third party/.test(readme), "README documents third-party components");
+  check(/## Design/.test(readme), "README documents the design system");
   check(!/whatsapp|facebook/i.test(readme + (popupHtml || "")), "no WhatsApp/Facebook links left");
   check(!/AI with Imran/.test(readme + (popupHtml || "") + (contentSrc || "") + (popupJs || "")),
     "old 'AI with Imran' branding is gone");

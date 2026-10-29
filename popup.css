@@ -22,7 +22,6 @@ body {
 
 .panel { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 
-/* --------------------------------------------------------------- brand */
 .brand { display: flex; align-items: center; gap: 10px; }
 .logo {
   width: 34px; height: 34px; flex-shrink: 0;
@@ -49,7 +48,6 @@ body {
 body.is-enabled .status-pill { background: var(--ink); color: #fff; }
 body.is-enabled .status-dot { background: #fff; border-color: #fff; }
 
-/* -------------------------------------------------------------- labels */
 .label {
   display: block;
   font-size: 9px; font-weight: 800; letter-spacing: 1.2px;
@@ -58,7 +56,6 @@ body.is-enabled .status-dot { background: #fff; border-color: #fff; }
 .hint { margin: 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
 .hint.warn { color: var(--ink); font-weight: 600; }
 
-/* ---------------------------------------------------------------- hero */
 .hero {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px;
@@ -68,7 +65,6 @@ body.is-enabled .status-dot { background: #fff; border-color: #fff; }
 .hero .state { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; margin-top: 2px; }
 .hero .hint { margin-top: 8px; }
 
-/* --------------------------------------------------------------- block */
 .block { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .block-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .block-desc { margin: 3px 0 0; font-size: 11px; color: var(--muted); }
@@ -102,7 +98,6 @@ body.is-enabled .status-dot { background: #fff; border-color: #fff; }
 .ghost:hover { background: var(--ink); color: #fff; }
 .ghost:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-/* ------------------------------------------------------------- rows */
 .settings { padding: 4px 14px; }
 .row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -124,9 +119,9 @@ body.is-enabled .status-dot { background: #fff; border-color: #fff; }
   cursor: pointer;
 }
 .row select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.row-actions { display: flex; align-items: center; gap: 8px; }
+.ghost.tiny { padding: 3px 8px; font-size: 10px; }
 
-
-/* ---------------------------------------------------------------- switch */
 .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
 .switch.small { width: 36px; height: 20px; }
 .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
@@ -152,7 +147,6 @@ body.is-enabled .status-dot { background: #fff; border-color: #fff; }
 .switch.small input:checked + .slider::after { transform: translateX(16px); }
 .switch input:focus-visible + .slider { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-/* -------------------------------------------------------------- footer */
 footer {
   display: flex; align-items: center; gap: 7px;
   padding-top: 12px;

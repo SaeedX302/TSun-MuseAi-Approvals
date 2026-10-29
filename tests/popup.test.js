@@ -112,7 +112,7 @@ test("mirrors the stored settings into the selects and the activity card", async
   await sleep(50);
   assert.strictEqual(doc.getElementById("delaySelect").value, "2000");
   assert.strictEqual(doc.getElementById("autoOffSelect").value, "180");
-  assert.strictEqual(doc.getElementById("badgePosSelect").value, "bottom-right");
+  assert.strictEqual(doc.getElementById("badgeVisible").checked, true);
   assert.strictEqual(doc.getElementById("clickCount").textContent, "4");
   assert.strictEqual(doc.getElementById("mode").textContent, "Auto-click enabled");
   const items = doc.querySelectorAll("#historyList li");
@@ -122,15 +122,30 @@ test("mirrors the stored settings into the selects and the activity card", async
   assert.strictEqual(doc.getElementById("historyEmpty").style.display, "none");
 });
 
-test("keeps non-preset stored values visible in every select", async () => {
-  const { doc } = await bootPopup({ aiClickDelayMs: 1500, aiAutoOffMinutes: 90, aiBadgePosition: "left" },
-    { tabUrl: "https://muse.ai/" });
+test("keeps non-preset stored values visible in the selects", async () => {
+  const { doc } = await bootPopup({ aiClickDelayMs: 1500, aiAutoOffMinutes: 90 }, { tabUrl: "https://muse.ai/" });
   await sleep(50);
-  for (const [id, value] of [["delaySelect", "1500"], ["autoOffSelect", "90"], ["badgePosSelect", "left"]]) {
+  for (const [id, value] of [["delaySelect", "1500"], ["autoOffSelect", "90"]]) {
     const sel = doc.getElementById(id);
     assert.strictEqual(sel.value, value, id + " keeps the stored value");
     assert.strictEqual(sel.selectedOptions[0].textContent, value, id + " shows the stored value");
   }
+});
+
+test("badge switch hides the badge and reset restores the default spot", async () => {
+  const { doc, store } = await bootPopup({ hunaarEnabled: true, aiBadgePosition: "top-right", aiBadgeOffset: { x: 40, y: 40 } },
+    { tabUrl: "https://muse.ai/" });
+  await sleep(50);
+  const badgeVisible = doc.getElementById("badgeVisible");
+  assert.strictEqual(badgeVisible.checked, true);
+  badgeVisible.checked = false;
+  badgeVisible.dispatchEvent(new (doc.defaultView.Event)("change", { bubbles: true }));
+  await sleep(40);
+  assert.strictEqual(store.aiBadgePosition, "hidden");
+  doc.getElementById("resetBadge").dispatchEvent(new (doc.defaultView.Event)("click", { bubbles: true }));
+  await sleep(40);
+  assert.strictEqual(store.aiBadgeOffset, null, "reset clears the saved position");
+  assert.strictEqual(store.aiBadgePosition, "top-right");
 });
 
 test("switches and reset write the same storage keys as before", async () => {
