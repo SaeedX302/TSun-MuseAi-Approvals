@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """Generate icons/icon{16,32,48,128}.png — the TSun MuseAi mark.
-
-Monochrome only: a black plate with one sliced corner and a white geometric
-"TS", echoing the TSun monogram. Written by hand with zlib (no image library)
-and rendered at 4x with supersampling so the 16 px size stays crisp.
-
-Usage: python3 tools/make-icons.py
+Black plate, one sliced corner, white geometric TS. Pure stdlib (zlib), 4x supersampled.
+Run: python3 tools/make-icons.py  (or npm run icons)
 """
 import os
 import struct

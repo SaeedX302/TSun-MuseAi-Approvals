@@ -1,11 +1,9 @@
-/* TSun-MuseAi-Approvals — popup v10.0.0
-   Storage keys are unchanged from the previous branding, so existing
-   settings keep working after the rename. */
+/* TSun-MuseAi-Approvals — popup v11.0.0 */
 
 const enabled=document.getElementById("enabled"), pub=document.getElementById("publicLinks");
 const state=document.getElementById("stateText"), footer=document.getElementById("footerText"), mode=document.getElementById("mode"), pillText=document.getElementById("statusPillText");
 const countEl=document.getElementById("clickCount"), lastEl=document.getElementById("lastClick"), historyList=document.getElementById("historyList"), historyEmpty=document.getElementById("historyEmpty"), resetBtn=document.getElementById("resetHistory");
-const delaySelect=document.getElementById("delaySelect"), autoOffSelect=document.getElementById("autoOffSelect"), badgePosSelect=document.getElementById("badgePosSelect");
+const delaySelect=document.getElementById("delaySelect"), autoOffSelect=document.getElementById("autoOffSelect"), badgeVisible=document.getElementById("badgeVisible"), resetBadge=document.getElementById("resetBadge");
 const tabStatus=document.getElementById("tabStatus"), tabHint=document.getElementById("tabHint");
 
 const MUSE_URL=/^https?:\/\/([a-z0-9-]+\.)*muse\.ai(?:[\/:?#]|$)/i;
@@ -74,7 +72,7 @@ function refresh(){chrome.storage.local.get({hunaarEnabled:false,hunaarAllowPubl
   renderHistory(s.aiClickHistory);
   setSelect(delaySelect,s.aiClickDelayMs);
   setSelect(autoOffSelect,s.aiAutoOffMinutes);
-  setSelect(badgePosSelect,s.aiBadgePosition||"top-right");
+  badgeVisible.checked=s.aiBadgePosition!=="hidden";
 });}
 
 function save(key,value){chrome.storage.local.set({[key]:value},refresh);}
@@ -83,7 +81,8 @@ enabled.addEventListener("change",()=>save("hunaarEnabled",enabled.checked));
 pub.addEventListener("change",()=>save("hunaarAllowPublicLinks",pub.checked));
 delaySelect.addEventListener("change",()=>save("aiClickDelayMs",Number(delaySelect.value)));
 autoOffSelect.addEventListener("change",()=>save("aiAutoOffMinutes",Number(autoOffSelect.value)));
-badgePosSelect.addEventListener("change",()=>save("aiBadgePosition",badgePosSelect.value));
+badgeVisible.addEventListener("change",()=>save("aiBadgePosition",badgeVisible.checked?"top-right":"hidden"));
+resetBadge.addEventListener("click",()=>{chrome.storage.local.set({aiBadgeOffset:null,aiBadgePosition:"top-right"},refresh);});
 resetBtn.addEventListener("click",()=>{chrome.storage.local.set({aiClickCount:0,aiLastClick:null,aiClickHistory:[]},refresh);});
 chrome.storage.onChanged.addListener((changes,area)=>{ if(area==="local") refresh(); });
 

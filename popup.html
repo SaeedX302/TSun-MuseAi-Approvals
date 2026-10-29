@@ -74,12 +74,11 @@
       </select>
     </div>
     <div class="row">
-      <label for="badgePosSelect">Badge</label>
-      <select id="badgePosSelect">
-        <option value="top-right">Top right</option>
-        <option value="bottom-right">Bottom right</option>
-        <option value="hidden">Hidden</option>
-      </select>
+      <span>Badge</span>
+      <div class="row-actions">
+        <button type="button" class="ghost tiny" id="resetBadge">Reset</button>
+        <label class="switch small"><input type="checkbox" id="badgeVisible"><span class="slider"></span></label>
+      </div>
     </div>
     <p class="hint" id="tabHint">Checking the current tab…</p>
   </section>
@@ -87,7 +86,7 @@
   <footer>
     <span class="live-dot"></span>
     <span id="footerText">Automation is off</span>
-    <span class="version">v10.0.0</span>
+    <span class="version">v11.0.0</span>
   </footer>
 </main>
 <script src="popup.js"></script>

@@ -147,6 +147,88 @@ test("badge is a keyboard accessible button and toggles the stored switch", asyn
 });
 
 
+/* jsdom viewport is 1024x768 and the stubbed badge box is 200x60, so the
+   default top-right anchor is x = 1024-200-16 = 808, y = 96, and the clamp
+   bounds are 824 x 708. */
+function gesture(win, badge, from, to) {
+  badge.dispatchEvent(new win.MouseEvent("pointerdown", { clientX: from[0], clientY: from[1], button: 0, bubbles: true }));
+  if (to) badge.dispatchEvent(new win.MouseEvent("pointermove", { clientX: to[0], clientY: to[1], bubbles: true }));
+  badge.dispatchEvent(new win.MouseEvent("pointerup", { clientX: (to || from)[0], clientY: (to || from)[1], bubbles: true }));
+  badge.dispatchEvent(new win.MouseEvent("click", { bubbles: true })); // browsers dispatch click after pointerup
+}
+
+test("badge drags anywhere and remembers the spot", async () => {
+  const { win, store } = await bootContent("", { hunaarEnabled: false });
+  await sleep(80);
+  const badge = win.document.getElementById("tsun-museai-badge");
+  assert.strictEqual(badge.style.left, "808px", "starts at the top-right anchor");
+  gesture(win, badge, [200, 200], [400, 320]);
+  await sleep(30);
+  assert.strictEqual(badge.style.left, "200px");
+  assert.strictEqual(badge.style.top, "120px");
+  assert.deepStrictEqual({ x: store.aiBadgeOffset.x, y: store.aiBadgeOffset.y }, { x: 200, y: 120 });
+  assert.strictEqual(store.hunaarEnabled, false, "a drag must not flip the switch");
+});
+
+test("a saved badge position is restored on the next page", async () => {
+  const { win } = await bootContent("", { aiBadgeOffset: { x: 300, y: 250 }, aiBadgePosition: "top-right" });
+  await sleep(80);
+  const badge = win.document.getElementById("tsun-museai-badge");
+  assert.strictEqual(badge.style.left, "300px");
+  assert.strictEqual(badge.style.top, "250px");
+});
+
+test("a dragged badge can never leave the screen", async () => {
+  const { win, store } = await bootContent("", { hunaarEnabled: false, aiBadgeOffset: { x: 400, y: 300 } });
+  await sleep(80);
+  const badge = win.document.getElementById("tsun-museai-badge");
+  gesture(win, badge, [0, 0], [-900, -900]);
+  await sleep(30);
+  assert.strictEqual(badge.style.left, "0px", "left edge is clamped to 0");
+  assert.strictEqual(badge.style.top, "0px", "top edge is clamped to 0");
+  gesture(win, badge, [0, 0], [4000, 4000]);
+  await sleep(30);
+  assert.strictEqual(badge.style.left, "824px", "right edge keeps the badge fully visible");
+  assert.strictEqual(badge.style.top, "708px", "bottom edge keeps the badge fully visible");
+  assert.ok(store.aiBadgeOffset.x <= 824 && store.aiBadgeOffset.y <= 708, "the saved position is clamped too");
+});
+
+test("a tap still toggles, a drag does not", async () => {
+  const { win, store } = await bootContent("", { hunaarEnabled: false });
+  await sleep(80);
+  const badge = win.document.getElementById("tsun-museai-badge");
+  gesture(win, badge, [200, 200]);
+  await sleep(60);
+  assert.strictEqual(store.hunaarEnabled, true, "tap toggles ON");
+  gesture(win, badge, [200, 200], [260, 260]);
+  await sleep(60);
+  assert.strictEqual(store.hunaarEnabled, true, "drag leaves the switch alone");
+  gesture(win, badge, [200, 200]);
+  await sleep(60);
+  assert.strictEqual(store.hunaarEnabled, false, "next tap toggles OFF again");
+});
+
+test("arrow keys nudge the badge and persist it", async () => {
+  const { win, store } = await bootContent("", { hunaarEnabled: false });
+  await sleep(80);
+  const badge = win.document.getElementById("tsun-museai-badge");
+  badge.dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+  await sleep(40);
+  assert.strictEqual(badge.style.left, "800px");
+  badge.dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", shiftKey: true, bubbles: true }));
+  await sleep(40);
+  assert.strictEqual(badge.style.left, "824px", "clamped at the right edge");
+  assert.strictEqual(store.aiBadgeOffset.x, 824);
+});
+
+test("the badge can be hidden from the popup", async () => {
+  const { win } = await bootContent("", { hunaarEnabled: true, aiBadgePosition: "hidden" });
+  await sleep(80);
+  const badge = win.document.getElementById("tsun-museai-badge");
+  assert.ok(badge.classList.contains("tsun-hidden"), "hidden when the setting says so");
+});
+
+
 test("auto-OFF timer survives unrelated setting changes but follows a new duration", async () => {
   const { chrome, liveTimers, liveLongTimers } = await bootContent("", {
     hunaarEnabled: true, aiAutoOffMinutes: 120, aiClickDelayMs: 1000
