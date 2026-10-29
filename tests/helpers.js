@@ -22,7 +22,7 @@ function makeChrome(initial, opts) {
       local: {
         get(defaults, cb) {
           reads.count++;
-          if (options.invalidated) { reads.afterInvalidation++; }
+          if (options.invalidated) { reads.afterInvalidation++; throw new Error("Extension context invalidated."); }
           const out = {};
           if (typeof defaults === "string") out[defaults] = store[defaults];
           else if (Array.isArray(defaults)) defaults.forEach(k => { out[k] = store[k]; });
@@ -30,6 +30,7 @@ function makeChrome(initial, opts) {
           cb(out);
         },
         set(values, cb) {
+          if (options.invalidated) { reads.afterInvalidation++; throw new Error("Extension context invalidated."); }
           const changes = {};
           for (const k of Object.keys(values)) changes[k] = { oldValue: store[k], newValue: values[k] };
           Object.assign(store, values);

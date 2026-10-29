@@ -168,8 +168,26 @@
     }
     return out;
   }
+  /* Cheap text sources of a button. Compared before any visibility check,
+     because getBoundingClientRect/getComputedStyle are the expensive part and
+     a busy page can hold hundreds of buttons. */
+  function labelSources(el) {
+    const out = [];
+    const add = v => { const n = norm(v); if (n) out.push(n); };
+    add(el.textContent);
+    add(el.value);
+    if (el.getAttribute) { add(el.getAttribute("aria-label")); add(el.getAttribute("title")); }
+    return out;
+  }
   function usableButtons(root) {
-    return deepButtons(root).filter(b => isVisible(b) && isEnabled(b));
+    const out = [];
+    for (const b of deepButtons(root)) {
+      if (!isEnabled(b)) continue;
+      if (!labelSources(b).some(l => isAllowLabel(l) || isDenyLabel(l))) continue;
+      if (!isVisible(b)) continue;
+      out.push({ el: b, label: elementLabel(b) });
+    }
+    return out;
   }
 
   // ----------------------------------------------------------------- cards
@@ -185,7 +203,7 @@
   /* A card is always an ancestor of its "Allow" button, so walk *up* from the
      allow buttons instead of sweeping the whole document for candidates. */
   function labelledButtons() {
-    return usableButtons(document).map(el => ({ el, label: elementLabel(el) }));
+    return usableButtons(document);
   }
   function findCard() {
     let buttons = labelledButtons();
@@ -220,7 +238,8 @@
     return candidates[0].el;
   }
   function allowButtonIn(card) {
-    return usableButtons(card).find(b => isAllowLabel(elementLabel(b))) || null;
+    const found = usableButtons(card).find(x => isAllowLabel(x.label));
+    return found ? found.el : null;
   }
 
   // ---------------------------------------------------------------- badge

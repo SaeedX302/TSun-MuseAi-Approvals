@@ -143,8 +143,10 @@ test("stops quietly after the extension is reloaded (invalidated context)", asyn
   chrome.runtime.id = undefined; // "Extension context invalidated" in a pre-reload tab
   harness.options.invalidated = true;
   wideQueries.length = 0;
+  const badge = win.document.getElementById("ai-with-imran-floating");
+  try { badge.dispatchEvent(new win.MouseEvent("click", { bubbles: true })); }
+  catch (e) { errors.push(e.message); }
   await sleep(1500);
+  assert.deepStrictEqual(errors, [], "must not raise errors after the extension was reloaded");
   assert.strictEqual(harness.reads.afterInvalidation, 0, "must not touch storage after invalidation");
-  assert.deepStrictEqual(errors, [], "must not raise uncaught errors");
 });
-
