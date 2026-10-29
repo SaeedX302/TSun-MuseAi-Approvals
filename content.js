@@ -183,7 +183,8 @@
     const out = [];
     for (const b of deepButtons(root)) {
       if (!isEnabled(b)) continue;
-      if (!labelSources(b).some(l => isAllowLabel(l) || isDenyLabel(l))) continue;
+      /* coarse substring test first (no layout), exact label test after */
+      if (!labelSources(b).some(l => l.includes("allow") || l.includes("deny"))) continue;
       if (!isVisible(b)) continue;
       out.push({ el: b, label: elementLabel(b) });
     }
