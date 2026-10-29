@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="TSun MuseAi">
+  <!-- TSun monogram: geometric TS in a black plate with one sliced corner,
+       a monochrome take on the TSun Studio mark. -->
+  <path d="M10 0 H30 L48 18 V38 A10 10 0 0 1 38 48 H10 A10 10 0 0 1 0 38 V10 A10 10 0 0 1 10 0 Z" fill="#111111"/>
+  <rect x="7" y="12" width="15" height="4.4" fill="#ffffff"/>
+  <rect x="12.3" y="12" width="4.4" height="18" fill="#ffffff"/>
+  <path d="M36.5 16.2 H26.5 a4.9 4.9 0 0 0 0 9.8 H32 a4.9 4.9 0 0 1 0 9.8 H22"
+        fill="none" stroke="#ffffff" stroke-width="4.4" stroke-linecap="square"/>
+</svg>

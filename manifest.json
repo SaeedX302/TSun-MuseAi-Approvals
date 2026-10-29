@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AI with Imran",
-  "version": "9.4.0",
-  "description": "Muse AI approval helper: auto-clicks Allow on Hatch file-share cards; public-link prompts need the second switch.",
+  "name": "TSun-MuseAi-Approvals",
+  "version": "10.0.0",
+  "description": "Minimal approval helper for muse.ai: auto-clicks Allow on Hatch file-share cards; public-link prompts need the second switch.",
   "permissions": [
     "storage"
   ],
@@ -17,7 +17,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "AI with Imran",
+    "default_title": "TSun MuseAi",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

@@ -20,15 +20,17 @@ function bigPage() {
 (async () => {
   const label = process.env.AWI_CONTENT ? path.basename(process.env.AWI_CONTENT) : "content.js";
   const { win } = await bootContent(bigPage(), { hunaarEnabled: true, aiClickDelayMs: 1000, aiAutoOffMinutes: 0 });
+  const nodeCount = win.document.querySelectorAll("*").length; // counted before the spy is installed
   const counts = { sweeps: 0, rects: 0, styles: 0 };
 
+  const isDocumentLevel = el => el === win.document || el === win.document.documentElement;
   const realQS = win.Document.prototype.querySelectorAll;
   win.Document.prototype.querySelectorAll = function (sel) {
-    if (sel === "*") counts.sweeps++;
+    if (sel === "*" && isDocumentLevel(this)) counts.sweeps++;
     return realQS.call(this, sel);
   };
   win.Element.prototype.querySelectorAll = function (sel) {
-    if (sel === "*") counts.sweeps++;
+    if (sel === "*" && isDocumentLevel(this)) counts.sweeps++;
     return realQS.call(this, sel);
   };
   const realRect = win.Element.prototype.getBoundingClientRect;
@@ -37,7 +39,7 @@ function bigPage() {
   win.getComputedStyle = function (el, ps) { counts.styles++; return realStyle.call(win, el, ps); };
 
   await sleep(2000);
-  console.log(`${label}: page nodes=${win.document.querySelectorAll("*").length}, over 2s idle time ->`);
+  console.log(`${label}: page nodes=${nodeCount}, over 2s idle time ->`);
   console.log(`  full-document sweeps : ${counts.sweeps}`);
   console.log(`  getBoundingClientRect: ${counts.rects}`);
   console.log(`  getComputedStyle     : ${counts.styles}`);

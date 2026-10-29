@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Generate the extension icons (icons/icon{16,32,48,128}.png).
+"""Generate icons/icon{16,32,48,128}.png — the TSun MuseAi mark.
 
-Chrome shows a puzzle piece for extensions without icons, so this repo ships
-real ones. No image library is required: the PNGs are written by hand with
-zlib, and the artwork (violet rounded square + amber underline + white "AI")
-is rasterised with 4x supersampling so the small sizes stay crisp.
+Monochrome only: a black plate with one sliced corner and a white geometric
+"TS", echoing the TSun monogram. Written by hand with zlib (no image library)
+and rendered at 4x with supersampling so the 16 px size stays crisp.
 
 Usage: python3 tools/make-icons.py
 """
@@ -12,97 +11,88 @@ import os
 import struct
 import zlib
 
-BG_TOP = (167, 139, 250)      # #a78bfa violet
-BG_BOTTOM = (79, 70, 229)     # #4f46e5 indigo
-ACCENT = (245, 158, 11, 255)  # #f59e0b amber
-INK = (255, 255, 255, 255)
-SS = 4                        # supersampling factor
+INK = (0x11, 0x11, 0x11, 255)   # import/ink black
+PAPER = (0xFF, 0xFF, 0xFF, 255)  # white glyphs
+SS = 4                          # supersampling factor
 
-# 5x7 bitmap glyphs for "A" and "I"
+# 5x7 bitmap glyphs
 GLYPHS = {
-    "A": [
-        " ### ",
-        "#   #",
-        "#   #",
+    "T": [
         "#####",
-        "#   #",
-        "#   #",
-        "#   #",
+        "  #  ",
+        "  #  ",
+        "  #  ",
+        "  #  ",
+        "  #  ",
+        "  #  ",
     ],
-    "I": [
-        "#####",
-        "  #  ",
-        "  #  ",
-        "  #  ",
-        "  #  ",
-        "  #  ",
-        "#####",
+    "S": [
+        " ####",
+        "#    ",
+        "#    ",
+        " ### ",
+        "    #",
+        "    #",
+        "#### ",
     ],
 }
 
 
-def in_rounded_rect(x, y, w, h, r):
-    if x < 0 or y < 0 or x > w or y > h:
+def inside_plate(x, y, n):
+    """Rounded square with the top-right corner sliced off."""
+    r = n * 0.21
+    if x < 0 or y < 0 or x > n or y > n:
         return False
-    cx = min(max(x, r), w - r)
-    cy = min(max(y, r), h - r)
-    return (x - cx) ** 2 + (y - cy) ** 2 <= r * r + 0.0001 or (r <= x <= w - r) or (r <= y <= h - r)
+    # sliced corner: everything above the line from (0.62n, 0) to (n, 0.38n)
+    if y < 0.38 * n and y < x - 0.62 * n:
+        return False
+    cx = min(max(x, r), n - r)
+    cy = min(max(y, r), n - r)
+    return (x - cx) ** 2 + (y - cy) ** 2 <= r * r
 
 
 def render(size):
-    """Return a list of rows, each a list of (r, g, b, a) tuples."""
     n = size * SS
-    radius = n * 0.24
-    # layout of the glyph block
-    cell = (n * 0.085)
-    gap = cell * 0.6
-    glyph_w = 5 * cell
-    glyph_h = 7 * cell
-    total_w = glyph_w * 2 + gap
-    ox = (n - total_w) / 2.0
-    oy = (n - glyph_h) / 2.0 - n * 0.06
-    bar_top = oy + glyph_h + n * 0.10
-    bar_h = max(SS, n * 0.055)
-    bar_w = total_w * 0.42
-    bar_x = (n - bar_w) / 2.0
-
-    hi = [[[0, 0, 0, 0] for _ in range(n)] for _ in range(n)]
+    canvas = [[[0, 0, 0, 0] for _ in range(n)] for _ in range(n)]
 
     def put(px, py, colour):
         if 0 <= px < n and 0 <= py < n:
-            hi[py][px] = list(colour)
+            canvas[py][px] = list(colour)
 
     for py in range(n):
         for px in range(n):
-            if not in_rounded_rect(px + 0.5, py + 0.5, n, n, radius):
-                continue
-            t = py / float(n)
-            colour = (
-                int(BG_TOP[0] + (BG_BOTTOM[0] - BG_TOP[0]) * t),
-                int(BG_TOP[1] + (BG_BOTTOM[1] - BG_TOP[1]) * t),
-                int(BG_TOP[2] + (BG_BOTTOM[2] - BG_TOP[2]) * t),
-                255,
-            )
-            put(px, py, colour)
+            if inside_plate(px + 0.5, py + 0.5, n):
+                put(px, py, INK)
 
-    def draw_glyph(glyph, x0, y0):
-        rows = GLYPHS[glyph]
-        for gy, row in enumerate(rows):
+    cell = n * 0.085
+    gap = cell * 0.62
+    glyph_w, glyph_h = 5 * cell, 7 * cell
+    ox = (n - (glyph_w * 2 + gap)) / 2.0
+    oy = (n - glyph_h) / 2.0
+
+    def rect(x0, y0, x1, y1, colour):
+        for py in range(int(y0), int(y1)):
+            for px in range(int(x0), int(x1)):
+                put(px, py, colour)
+
+    def draw(letter, x0, y0):
+        # each "#" fills its whole cell (with a half-pixel overlap) so the
+        # strokes stay solid instead of showing seams between cells
+        for gy, row in enumerate(GLYPHS[letter]):
             for gx, ch in enumerate(row):
-                if ch != "#":
-                    continue
-                for sy in range(int(cell * 0.82)):
-                    for sx in range(int(cell * 0.82)):
-                        put(int(x0 + gx * cell + sx + cell * 0.09), int(y0 + gy * cell + sy + cell * 0.05), INK)
+                if ch == "#":
+                    rect(x0 + gx * cell, y0 + gy * cell,
+                         x0 + (gx + 1) * cell + 0.5, y0 + (gy + 1) * cell + 0.5, PAPER)
 
-    draw_glyph("A", ox, oy)
-    draw_glyph("I", ox + glyph_w + gap, oy)
+    if size <= 16:
+        # Two letters turn to mush at 16 px, so the small icon keeps the
+        # bold geometric T of the mark instead.
+        rect(0.20 * n, 0.26 * n, 0.80 * n, 0.44 * n, PAPER)
+        rect(0.42 * n, 0.26 * n, 0.58 * n, 0.76 * n, PAPER)
+    else:
+        draw("T", ox, oy)
+        draw("S", ox + glyph_w + gap, oy)
 
-    for py in range(int(bar_top), int(bar_top + bar_h)):
-        for px in range(int(bar_x), int(bar_x + bar_w)):
-            put(px, py, ACCENT)
-
-    # downsample
     out = []
     for y in range(size):
         row = []
@@ -110,15 +100,12 @@ def render(size):
             r = g = b = a = 0
             for dy in range(SS):
                 for dx in range(SS):
-                    pr, pg, pb, pa = hi[y * SS + dy][x * SS + dx]
+                    pr, pg, pb, pa = canvas[y * SS + dy][x * SS + dx]
                     r += pr * pa
                     g += pg * pa
                     b += pb * pa
                     a += pa
-            if a == 0:
-                row.append((0, 0, 0, 0))
-            else:
-                row.append((r // a, g // a, b // a, a // (SS * SS)))
+            row.append((0, 0, 0, 0) if a == 0 else (r // a, g // a, b // a, a // (SS * SS)))
         out.append(row)
     return out
 
@@ -132,8 +119,8 @@ def write_png(path, pixels):
             raw += bytes((r, g, b, a))
 
     def chunk(tag, data):
-        out = struct.pack(">I", len(data)) + tag + data
-        return out + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+        return (struct.pack(">I", len(data)) + tag + data
+                + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
 
     png = b"\x89PNG\r\n\x1a\n"
     png += chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0))
@@ -145,13 +132,11 @@ def write_png(path, pixels):
 
 
 def main():
-    here = os.path.dirname(os.path.abspath(__file__))
-    out_dir = os.path.join(os.path.dirname(here), "icons")
+    out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "icons")
     os.makedirs(out_dir, exist_ok=True)
     for size in (16, 32, 48, 128):
         path = os.path.join(out_dir, "icon%d.png" % size)
-        written = write_png(path, render(size))
-        print("%s (%d bytes)" % (path, written))
+        print("%s (%d bytes)" % (path, write_png(path, render(size))))
 
 
 if __name__ == "__main__":

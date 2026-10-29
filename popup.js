@@ -1,9 +1,6 @@
-/* AI with Imran — popup v9.4.0
-   Storage keys are unchanged; this version only adds
-   - a "current tab" readout (no extra permission needed: tab.url is
-     exposed for muse.ai because of the existing host_permissions),
-   - a hint when the active tab is not muse.ai,
-   - a graceful fallback when a stored setting is not one of the presets. */
+/* TSun-MuseAi-Approvals — popup v10.0.0
+   Storage keys are unchanged from the previous branding, so existing
+   settings keep working after the rename. */
 
 const enabled=document.getElementById("enabled"), pub=document.getElementById("publicLinks");
 const state=document.getElementById("stateText"), footer=document.getElementById("footerText"), mode=document.getElementById("mode"), pillText=document.getElementById("statusPillText");
@@ -38,9 +35,16 @@ function setSelect(sel,value){
   sel.value=v;
 }
 
+function tabUnknown(){
+  tabStatus.textContent="Unknown";
+  tabHint.textContent="Tab information unavailable — settings are still saved.";
+  tabHint.classList.add("warn");
+}
+
 function checkTab(){
   try{
     chrome.tabs.query({active:true,currentWindow:true},tabs=>{
+      if(chrome.runtime.lastError){ tabUnknown(); return; }
       const tab=tabs&&tabs[0];
       const url=tab&&tab.url?tab.url:"";
       const onMuse=MUSE_URL.test(url);
@@ -49,14 +53,12 @@ function checkTab(){
       else if(url){ try { label=new URL(url).hostname; } catch(_) { label="Not a Muse tab"; } }
       tabStatus.textContent=label;
       tabHint.textContent=onMuse
-        ? "Muse tab khula hai — yahan se kiya gaya change usi tab par foran lag jayega."
-        : "Is waqt muse.ai tab khula nahi hai. Settings save ho jayengi; Muse tab refresh karein taake change nazar aaye.";
+        ? "Muse tab detected — changes apply to it immediately."
+        : "No muse.ai tab is focused. Settings are saved; reload the Muse tab to see them.";
       tabHint.classList.toggle("warn",!onMuse);
     });
   }catch(_){
-    tabStatus.textContent="Unknown";
-    tabHint.textContent="Tab ki jaankari nahi mil saki — settings phir bhi save hongi.";
-    tabHint.classList.add("warn");
+    tabUnknown();
   }
 }
 
