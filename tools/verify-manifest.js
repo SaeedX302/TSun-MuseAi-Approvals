@@ -154,6 +154,33 @@ for (const f of ["content.js", "content.css", "popup.css", "popup.html", "popup.
   check(isFile(f), "file present: " + f);
 }
 
+/* ------------------------------------------------------------- palette */
+/* The redesign is monochrome on purpose: every colour literal in the two
+   stylesheets must be a grey (r == g == b). */
+function isMonochrome(css) {
+  const bad = [];
+  for (const m of css.matchAll(/#([0-9a-fA-F]{3,8})\b/g)) {
+    let hex = m[1];
+    if (hex.length === 3 || hex.length === 4) hex = hex.split("").map(c => c + c).join("");
+    const r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+    if (!(r === g && g === b)) bad.push(m[0]);
+  }
+  for (const m of css.matchAll(/rgba?\(([^)]+)\)/g)) {
+    const parts = m[1].split(",").map(s => parseFloat(s));
+    if (!(parts[0] === parts[1] && parts[1] === parts[2])) bad.push(m[0]);
+  }
+  const hueWords = /\b(?:orange|amber|violet|purple|indigo|red|green|blue|pink|teal|cyan|gold|yellow)\b/i;
+  const withoutNames = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  if (hueWords.test(withoutNames)) bad.push("named colour: " + withoutNames.match(hueWords)[0]);
+  return bad;
+}
+for (const css of ["popup.css", "content.css"]) {
+  const text = readText(css, css);
+  if (text === null) continue;
+  const bad = isMonochrome(text);
+  check(bad.length === 0, css + " uses a monochrome palette only" + (bad.length ? " (found " + bad.join(", ") + ")" : ""));
+}
+
 /* ---------------------------------------------------------- consistency */
 const version = manifest ? manifest.version : "";
 if (popupHtml !== null) check(popupHtml.includes("v" + version), "popup footer shows v" + version);
