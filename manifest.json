@@ -1,1 +1,45 @@
-{"action":{"default_popup":"popup.html","default_title":"AI with Imran"},"content_scripts":[{"all_frames":true,"css":["content.css"],"js":["content.js"],"matches":["https://muse.ai/*","https://*.muse.ai/*"],"run_at":"document_idle"}],"description":"Muse AI approval helper: auto-clicks Allow on Hatch file-share cards; public-link prompts need the second switch.","host_permissions":["https://muse.ai/*","https://*.muse.ai/*"],"manifest_version":3,"name":"AI with Imran","permissions":["storage"],"version":"9.3.1"}
+{
+  "manifest_version": 3,
+  "name": "AI with Imran",
+  "version": "9.4.0",
+  "description": "Muse AI approval helper: auto-clicks Allow on Hatch file-share cards; public-link prompts need the second switch.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://muse.ai/*",
+    "https://*.muse.ai/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "AI with Imran",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://muse.ai/*",
+        "https://*.muse.ai/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}

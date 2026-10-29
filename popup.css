@@ -140,3 +140,7 @@ body.is-enabled .live-dot { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
   font: 700 11px "Gill Sans", "Trebuchet MS", "Segoe UI", sans-serif; padding: 6px 8px; cursor: pointer; max-width: 150px;
 }
 .row select:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
+
+/* v9.4: current-tab readout */
+.tab-hint { font-size: 11px; line-height: 1.5; color: #b8b0d8; margin: 9px 0 0; }
+.tab-hint.warn { color: #fcd34d; }

@@ -26,6 +26,11 @@
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(245, 158, 11, 0.18) !important;
 }
 #ai-with-imran-floating:active { transform: scale(0.98) !important; }
+/* v9.4: the badge is a real button now, so it needs a visible focus ring */
+#ai-with-imran-floating:focus-visible {
+  outline: 2px solid #fbbf24 !important;
+  outline-offset: 2px !important;
+}
 #ai-with-imran-floating .awi-mark {
   width: 28px !important;
   height: 28px !important;
