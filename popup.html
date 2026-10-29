@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI with Imran</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<main class="panel">
+  <div class="topbar"></div>
+
+  <header class="brand">
+    <div class="logo" aria-hidden="true">AI</div>
+    <div class="brand-text">
+      <div class="eyebrow">MUSE ASSIST</div>
+      <h1>AI with Imran</h1>
+      <p class="sub">Approval helper for muse.ai</p>
+    </div>
+    <span class="status-pill" id="statusPill"><span class="status-dot"></span><span id="statusPillText">Off</span></span>
+  </header>
+
+  <nav class="socials" aria-label="Social links">
+    <a class="social wa" target="_blank" rel="noopener" href="https://whatsapp.com/channel/0029Vb9VJU6AYlUG9GQWrY2D">
+      <span class="social-icon">W</span>
+      <span class="social-label">WhatsApp Channel</span>
+      <span class="arrow">↗</span>
+    </a>
+    <a class="social fb" target="_blank" rel="noopener" href="https://www.facebook.com/profile.php?id=100093358239749">
+      <span class="social-icon">f</span>
+      <span class="social-label">Facebook Profile</span>
+      <span class="arrow">↗</span>
+    </a>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <div class="label">AUTOMATION CONTROL</div>
+      <div class="state" id="stateText">Disabled</div>
+      <p>Main switch ON = Hatch file-share cards auto-allow.</p>
+    </div>
+    <label class="switch"><input type="checkbox" id="enabled"><span class="slider"></span></label>
+  </section>
+
+  <section class="activity">
+    <div class="activity-head">
+      <div>
+        <div class="label">ACTIVITY</div>
+        <div class="activity-count"><span id="clickCount">0</span> <span class="activity-count-label">Allow clicks</span></div>
+        <div class="activity-last">Aakhri Allow: <strong id="lastClick">—</strong></div>
+      </div>
+      <button type="button" class="reset-btn" id="resetHistory">Reset</button>
+    </div>
+    <ul class="history" id="historyList"></ul>
+    <p class="history-empty" id="historyEmpty">Abhi koi Allow click record nahi hai.</p>
+  </section>
+
+  <section class="option">
+    <div class="option-head">
+      <div>
+        <div class="option-title">Upload + public link</div>
+        <div class="option-desc">Extra gate ONLY for public-link prompts. Hatch file-share cards do not need this switch.</div>
+      </div>
+      <label class="switch small"><input type="checkbox" id="publicLinks"><span class="slider"></span></label>
+    </div>
+    <div class="warning">
+      <b aria-hidden="true">!</b>
+      <p>This makes a shareable public link. Anyone with the link may access the file. Enable only if you want this approval automated.</p>
+    </div>
+  </section>
+
+  <div class="notice">
+    <b aria-hidden="true">i</b>
+    <p>For Facebook uploads, the main switch alone is enough. After updating, reload the extension and refresh the Muse tab. If a card still does not auto-click, press F12 &gt; Console and look for “[AI with Imran:]”.</p>
+  </div>
+
+  <section class="settings">
+    <div class="row"><span>Site</span><strong>muse.ai</strong></div>
+    <div class="row"><span>Public-link prompt</span><strong id="mode">Manual approval</strong></div>
+    <div class="row">
+      <label for="delaySelect">Click delay</label>
+      <select id="delaySelect">
+        <option value="0">Foran (0s)</option>
+        <option value="500">0.5 second</option>
+        <option value="1000">1 second</option>
+        <option value="2000">2 seconds</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="autoOffSelect">Auto-OFF timer</label>
+      <select id="autoOffSelect">
+        <option value="0">Kabhi nahi</option>
+        <option value="30">30 minute</option>
+        <option value="60">1 ghanta</option>
+        <option value="120">2 ghante</option>
+        <option value="180">3 ghante</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="badgePosSelect">Badge ki jagah</label>
+      <select id="badgePosSelect">
+        <option value="top-right">Upar right</option>
+        <option value="bottom-right">Neeche right</option>
+        <option value="hidden">Chhupao</option>
+      </select>
+    </div>
+  </section>
+
+  <footer>
+    <span class="live-dot"></span>
+    <span id="footerText">Automation is off</span>
+    <span class="version">v9.3.1</span>
+  </footer>
+</main>
+<script src="popup.js"></script>
+</body>
+</html>
