@@ -70,18 +70,28 @@ def render(size):
     ox = (n - (glyph_w * 2 + gap)) / 2.0
     oy = (n - glyph_h) / 2.0
 
+    def rect(x0, y0, x1, y1, colour):
+        for py in range(int(y0), int(y1)):
+            for px in range(int(x0), int(x1)):
+                put(px, py, colour)
+
     def draw(letter, x0, y0):
+        # each "#" fills its whole cell (with a half-pixel overlap) so the
+        # strokes stay solid instead of showing seams between cells
         for gy, row in enumerate(GLYPHS[letter]):
             for gx, ch in enumerate(row):
-                if ch != "#":
-                    continue
-                for sy in range(int(cell * 0.86)):
-                    for sx in range(int(cell * 0.86)):
-                        put(int(x0 + gx * cell + sx + cell * 0.07),
-                            int(y0 + gy * cell + sy + cell * 0.07), PAPER)
+                if ch == "#":
+                    rect(x0 + gx * cell, y0 + gy * cell,
+                         x0 + (gx + 1) * cell + 0.5, y0 + (gy + 1) * cell + 0.5, PAPER)
 
-    draw("T", ox, oy)
-    draw("S", ox + glyph_w + gap, oy)
+    if size <= 16:
+        # Two letters turn to mush at 16 px, so the small icon keeps the
+        # bold geometric T of the mark instead.
+        rect(0.20 * n, 0.26 * n, 0.80 * n, 0.44 * n, PAPER)
+        rect(0.42 * n, 0.26 * n, 0.58 * n, 0.76 * n, PAPER)
+    else:
+        draw("T", ox, oy)
+        draw("S", ox + glyph_w + gap, oy)
 
     out = []
     for y in range(size):
