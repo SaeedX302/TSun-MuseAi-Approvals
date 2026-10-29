@@ -1,0 +1,12 @@
+{
+  "name": "ai-with-imran-muse-assist",
+  "version": "9.4.0",
+  "private": true,
+  "description": "Muse AI approval helper (Chrome MV3 extension)",
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.3"
+  }
+}
