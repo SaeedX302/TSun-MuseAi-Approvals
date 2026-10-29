@@ -1,36 +1,57 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert");
-const { POPUP_SRC, POPUP_HTML, closeAll } = require("./helpers");
+const { POPUP_SRC, POPUP_HTML, closeAll, sleep } = require("./helpers");
 const { JSDOM } = require("jsdom");
 
 test.afterEach(() => closeAll());
 test.after(() => closeAll());
 
-function bootPopup(settings, tab) {
+/* The tab mock deliberately returns several tabs; it only applies the filters
+   the popup actually asked for, so a dropped `active` or `currentWindow`
+   filter shows up as the wrong tab winning. */
+const TABS = [
+  { id: 1, url: "https://example.com/other", active: false, currentWindow: true },
+  { id: 2, url: "https://muse.ai/not-focused", active: true, currentWindow: false },
+  { id: 3, url: "PLACEHOLDER", active: true, currentWindow: true }
+];
+
+function bootPopup(settings, opts) {
+  const options = opts || {};
   const html = POPUP_HTML.replace(/<script src="popup.js"><\/script>/, "");
   const dom = new JSDOM(html, { runScripts: "dangerously", pretendToBeVisual: true, url: "chrome-extension://test/popup.html" });
   const win = dom.window;
   const store = Object.assign({}, settings);
   const listeners = [];
+  const queryCalls = [];
+
   const chrome = {
-    runtime: { id: "test-extension-id" },
+    runtime: { id: "test-extension-id", lastError: options.tabError || undefined },
     tabs: {
-      query(opts, cb) { cb([{ id: 7, url: tab.url, active: true, currentWindow: true }]); }
+      query(query, cb) {
+        queryCalls.push(query);
+        if (options.tabError) { cb([]); return; }
+        const tabs = TABS.map(t => Object.assign({}, t, { url: t.url === "PLACEHOLDER" ? options.tabUrl : t.url }))
+          .filter(t => query.active === undefined || t.active === query.active)
+          .filter(t => query.currentWindow === undefined || t.currentWindow === query.currentWindow);
+        cb(tabs);
+      }
     },
     storage: {
       local: {
         get(defaults, cb) {
           const out = {};
           Object.keys(defaults).forEach(k => { out[k] = store[k] === undefined ? defaults[k] : store[k]; });
-          cb(out);
+          setTimeout(() => cb(out), 0);
         },
         set(values, cb) {
           const changes = {};
           for (const k of Object.keys(values)) changes[k] = { oldValue: store[k], newValue: values[k] };
           Object.assign(store, values);
-          listeners.forEach(fn => fn(changes, "local"));
-          if (cb) cb();
+          setTimeout(() => {
+            listeners.forEach(fn => fn(changes, "local"));
+            if (cb) cb();
+          }, 0);
         }
       },
       onChanged: { addListener(fn) { listeners.push(fn); } }
@@ -38,12 +59,13 @@ function bootPopup(settings, tab) {
   };
   win.chrome = chrome;
   win.eval(POPUP_SRC);
-  return { win, store, doc: win.document };
+  const { window } = dom;
+  return { win, store, doc: win.document, queryCalls, dom, close: () => window.close() };
 }
 
-test("shows muse.ai when the active tab is a Muse tab", async () => {
-  const { doc, win } = bootPopup({ hunaarEnabled: true }, { url: "https://muse.ai/videos/abc" });
-  win.dom = doc;
+test("shows muse.ai when the active, current-window tab is a Muse tab", async () => {
+  const { doc } = await bootPopup({ hunaarEnabled: true }, { tabUrl: "https://muse.ai/videos/abc" });
+  await sleep(50);
   assert.strictEqual(doc.getElementById("tabStatus").textContent, "muse.ai");
   assert.ok(!doc.getElementById("tabHint").classList.contains("warn"));
   assert.strictEqual(doc.getElementById("stateText").textContent, "Enabled");
@@ -51,20 +73,43 @@ test("shows muse.ai when the active tab is a Muse tab", async () => {
   assert.ok(doc.body.classList.contains("is-enabled"));
 });
 
+test("asks for the active tab of the current window", async () => {
+  const { queryCalls } = await bootPopup({}, { tabUrl: "https://muse.ai/" });
+  await sleep(50);
+  assert.strictEqual(queryCalls.length, 1);
+  assert.strictEqual(queryCalls[0].active, true);
+  assert.strictEqual(queryCalls[0].currentWindow, true);
+});
+
 test("warns when the active tab is not Muse", async () => {
-  const { doc } = bootPopup({ hunaarEnabled: false }, { url: "https://example.com/whatever" });
+  const { doc } = await bootPopup({ hunaarEnabled: false }, { tabUrl: "https://example.com/whatever" });
+  await sleep(50);
   assert.strictEqual(doc.getElementById("tabStatus").textContent, "example.com");
   assert.ok(doc.getElementById("tabHint").classList.contains("warn"));
   assert.strictEqual(doc.getElementById("stateText").textContent, "Disabled");
 });
 
+test("reports an unknown tab when chrome.tabs.query fails", async () => {
+  const { doc } = await bootPopup({}, { tabError: { message: "Tabs cannot be queried right now" } });
+  await sleep(50);
+  assert.strictEqual(doc.getElementById("tabStatus").textContent, "Unknown");
+  assert.ok(doc.getElementById("tabHint").classList.contains("warn"));
+});
+
+test("announces the tab result to assistive technology", async () => {
+  const { doc } = await bootPopup({}, { tabUrl: "https://muse.ai/" });
+  await sleep(50);
+  assert.strictEqual(doc.getElementById("tabStatus").getAttribute("role"), "status");
+});
+
 test("mirrors the stored settings into the selects and the activity card", async () => {
-  const { doc } = bootPopup({
+  const { doc } = await bootPopup({
     hunaarEnabled: true, hunaarAllowPublicLinks: true,
     aiClickDelayMs: 2000, aiAutoOffMinutes: 180, aiBadgePosition: "bottom-right",
     aiClickCount: 4, aiLastClick: Date.now(),
     aiClickHistory: [{ t: Date.now(), type: "hatch" }, { t: Date.now() - 1000, type: "public" }]
-  }, { url: "https://muse.ai/" });
+  }, { tabUrl: "https://muse.ai/" });
+  await sleep(50);
   assert.strictEqual(doc.getElementById("delaySelect").value, "2000");
   assert.strictEqual(doc.getElementById("autoOffSelect").value, "180");
   assert.strictEqual(doc.getElementById("badgePosSelect").value, "bottom-right");
@@ -77,25 +122,34 @@ test("mirrors the stored settings into the selects and the activity card", async
   assert.strictEqual(doc.getElementById("historyEmpty").style.display, "none");
 });
 
-test("keeps a non-preset stored value visible instead of blanking the select", async () => {
-  const { doc } = bootPopup({ aiClickDelayMs: 1500 }, { url: "https://muse.ai/" });
-  const sel = doc.getElementById("delaySelect");
-  assert.strictEqual(sel.value, "1500");
-  assert.strictEqual(sel.selectedOptions[0].textContent, "1500");
+test("keeps non-preset stored values visible in every select", async () => {
+  const { doc } = await bootPopup({ aiClickDelayMs: 1500, aiAutoOffMinutes: 90, aiBadgePosition: "left" },
+    { tabUrl: "https://muse.ai/" });
+  await sleep(50);
+  for (const [id, value] of [["delaySelect", "1500"], ["autoOffSelect", "90"], ["badgePosSelect", "left"]]) {
+    const sel = doc.getElementById(id);
+    assert.strictEqual(sel.value, value, id + " keeps the stored value");
+    assert.strictEqual(sel.selectedOptions[0].textContent, value, id + " shows the stored value");
+  }
 });
 
 test("switches and reset write the same storage keys as before", async () => {
-  const { doc, store } = bootPopup({ hunaarEnabled: false }, { url: "https://muse.ai/" });
+  const { doc, store } = await bootPopup({ hunaarEnabled: false }, { tabUrl: "https://muse.ai/" });
+  await sleep(50);
   const enabled = doc.getElementById("enabled");
   enabled.checked = true;
   enabled.dispatchEvent(new (doc.defaultView.Event)("change", { bubbles: true }));
+  await sleep(30);
   assert.strictEqual(store.hunaarEnabled, true);
   const pub = doc.getElementById("publicLinks");
   pub.checked = true;
   pub.dispatchEvent(new (doc.defaultView.Event)("change", { bubbles: true }));
+  await sleep(30);
   assert.strictEqual(store.hunaarAllowPublicLinks, true);
   doc.getElementById("resetHistory").dispatchEvent(new (doc.defaultView.Event)("click", { bubbles: true }));
+  await sleep(30);
   assert.strictEqual(store.aiClickCount, 0);
   assert.strictEqual(store.aiClickHistory.length, 0);
   assert.strictEqual(store.aiLastClick, null);
 });
+

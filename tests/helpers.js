@@ -11,13 +11,18 @@ const POPUP_HTML = fs.readFileSync(path.join(ROOT, "popup.html"), "utf8");
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+/* Storage mock that behaves like the real API: callbacks and onChanged
+   notifications arrive asynchronously, and every call throws once the
+   extension context is gone ("Extension context invalidated"). */
 function makeChrome(initial, opts) {
   const options = opts || {};
   const store = Object.assign({}, initial);
   const listeners = [];
   const reads = { afterInvalidation: 0, count: 0 };
+  const dispatch = fn => setTimeout(fn, 0);
+
   const chrome = {
-    runtime: { id: "test-extension-id" },
+    runtime: { id: "test-extension-id", lastError: undefined },
     storage: {
       local: {
         get(defaults, cb) {
@@ -27,15 +32,17 @@ function makeChrome(initial, opts) {
           if (typeof defaults === "string") out[defaults] = store[defaults];
           else if (Array.isArray(defaults)) defaults.forEach(k => { out[k] = store[k]; });
           else Object.keys(defaults).forEach(k => { out[k] = store[k] === undefined ? defaults[k] : store[k]; });
-          cb(out);
+          dispatch(() => cb(out));
         },
         set(values, cb) {
           if (options.invalidated) { reads.afterInvalidation++; throw new Error("Extension context invalidated."); }
           const changes = {};
           for (const k of Object.keys(values)) changes[k] = { oldValue: store[k], newValue: values[k] };
           Object.assign(store, values);
-          listeners.forEach(fn => { try { fn(changes, "local"); } catch (e) { console.error(e); } });
-          if (cb) cb();
+          dispatch(() => {
+            listeners.forEach(fn => { try { fn(changes, "local"); } catch (e) { console.error(e); } });
+            if (cb) cb();
+          });
         }
       },
       onChanged: { addListener(fn) { listeners.push(fn); } }
@@ -45,10 +52,10 @@ function makeChrome(initial, opts) {
 }
 
 /* jsdom has no layout engine: hand every element a box so isVisible() works.
-   `data-box="0"` simulates a zero-sized element. */
+   An element has no box when it, or any ancestor, is display:none or
+   visibility:hidden (jsdom does not propagate that by itself), or when it
+   carries data-box="0". */
 function installLayout(win) {
-  /* Faithful enough: an element has no box when it, or any ancestor, is
-     display:none or visibility:hidden (jsdom does not propagate that itself). */
   win.Element.prototype.getBoundingClientRect = function () {
     let el = this, zero = false;
     while (el && el.nodeType === 1) {
@@ -79,21 +86,48 @@ function makeWindow(html) {
   return win;
 }
 
+/* Boots content.js inside jsdom and instruments timers + DOM queries so tests
+   can assert on live timers and on full-document sweeps.
+     liveTimers : Map<handle, delay>  -> only timers that are still pending
+     timeouts   : delays of every setTimeout ever requested
+     wideQueries: every querySelectorAll("*") call on Document or Element */
 async function bootContent(html, settings, opts) {
   const harness = makeChrome(settings, opts);
   const win = makeWindow(html);
   win.chrome = harness.chrome;
+
   const timeouts = [];
+  const liveTimers = new Map();
   const realSetTimeout = win.setTimeout.bind(win);
-  win.setTimeout = function (fn, delay, ...rest) { timeouts.push(Number(delay) || 0); return realSetTimeout(fn, delay, ...rest); };
-  const wideQueries = [];
-  const realQS = win.Document.prototype.querySelectorAll;
-  win.Document.prototype.querySelectorAll = function (sel) {
-    if (sel === "*") wideQueries.push(sel);
-    return realQS.call(this, sel);
+  const realClearTimeout = win.clearTimeout.bind(win);
+  win.setTimeout = function (fn, delay, ...rest) {
+    const ms = Number(delay) || 0;
+    timeouts.push(ms);
+    const id = realSetTimeout(() => { liveTimers.delete(id); fn(); }, delay, ...rest);
+    liveTimers.set(id, ms);
+    return id;
   };
+  win.clearTimeout = function (id) {
+    liveTimers.delete(id);
+    return realClearTimeout(id);
+  };
+
+  const wideQueries = []; // { sel, onDocument } for every querySelectorAll("*")
+  const instrument = proto => {
+    const real = proto.querySelectorAll;
+    proto.querySelectorAll = function (sel) {
+      if (sel === "*") {
+        wideQueries.push({ sel, onDocument: this === win.document || this === win.document.documentElement });
+      }
+      return real.call(this, sel);
+    };
+  };
+  instrument(win.Document.prototype);
+  instrument(win.Element.prototype);
+
   win.eval(CONTENT_SRC);
-  return { win, harness, store: harness.store, chrome: harness.chrome, timeouts, wideQueries };
+  const liveLongTimers = () => [...liveTimers.values()].filter(d => d >= 60000).length;
+  return { win, harness, store: harness.store, chrome: harness.chrome, timeouts, liveTimers, liveLongTimers, wideQueries };
 }
 
 function track(win, selector) {
@@ -104,3 +138,4 @@ function track(win, selector) {
 }
 
 module.exports = { ROOT, CONTENT_SRC, POPUP_SRC, POPUP_HTML, sleep, makeChrome, makeWindow, bootContent, track, closeAll };
+
