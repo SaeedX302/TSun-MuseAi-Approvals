@@ -6,6 +6,7 @@ const { JSDOM } = require("jsdom");
 const ROOT = path.join(__dirname, "..");
 const CONTENT_FILE = process.env.AWI_CONTENT ? path.resolve(process.env.AWI_CONTENT) : path.join(ROOT, "content.js");
 const CONTENT_SRC = fs.readFileSync(CONTENT_FILE, "utf8");
+const CONTENT_CSS = fs.readFileSync(path.join(ROOT, "content.css"), "utf8");
 const POPUP_SRC = fs.readFileSync(path.join(ROOT, "popup.js"), "utf8");
 const POPUP_HTML = fs.readFileSync(path.join(ROOT, "popup.html"), "utf8");
 
@@ -74,8 +75,9 @@ function closeAll() {
   for (const w of openWindows.splice(0)) { try { w.close(); } catch (_) {} }
 }
 
-function makeWindow(html) {
-  const dom = new JSDOM(`<!doctype html><html><body>${html}</body></html>`, {
+function makeWindow(html, cssText) {
+  const style = cssText ? `<style>${cssText}</style>` : "";
+  const dom = new JSDOM(`<!doctype html><html><head>${style}</head><body>${html}</body></html>`, {
     runScripts: "dangerously", pretendToBeVisual: true, url: "https://muse.ai/videos/abc"
   });
   const win = dom.window;
@@ -90,10 +92,12 @@ function makeWindow(html) {
    can assert on live timers and on full-document sweeps.
      liveTimers : Map<handle, delay>  -> only timers that are still pending
      timeouts   : delays of every setTimeout ever requested
-     wideQueries: every querySelectorAll("*") call on Document or Element */
-async function bootContent(html, settings, opts) {
+     wideQueries: every querySelectorAll("*") call on Document or Element
+   extras.css injects a stylesheet (normally content.css) into the page, which
+   is how the tests check that the badge can really be moved by inline styles. */
+async function bootContent(html, settings, opts, extras) {
   const harness = makeChrome(settings, opts);
-  const win = makeWindow(html);
+  const win = makeWindow(html, extras && extras.css);
   win.chrome = harness.chrome;
 
   const timeouts = [];
@@ -137,5 +141,5 @@ function track(win, selector) {
   return state;
 }
 
-module.exports = { ROOT, CONTENT_SRC, POPUP_SRC, POPUP_HTML, sleep, makeChrome, makeWindow, bootContent, track, closeAll };
+module.exports = { ROOT, CONTENT_SRC, CONTENT_CSS, POPUP_SRC, POPUP_HTML, sleep, makeChrome, makeWindow, bootContent, track, closeAll };
 

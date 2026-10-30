@@ -269,6 +269,45 @@ test("stops quietly after the extension is reloaded (invalidated context)", asyn
   assert.strictEqual(harness.store.hunaarEnabled, true, "the click was ignored, not saved");
 });
 
+test("the badge fades after 5 s of rest and wakes on hover", async () => {
+  const { win } = await bootContent("", { hunaarEnabled: false, aiAutoOffMinutes: 0 });
+  await sleep(80);
+  const badge = win.document.getElementById("tsun-museai-badge");
+  assert.ok(!badge.classList.contains("tsun-idle"), "awake right after boot");
+  await sleep(5200);
+  assert.ok(badge.classList.contains("tsun-idle"), "dims 5 s after the last interaction");
+  assert.ok(!badge.classList.contains("tsun-ghost"), "the ghost stage comes later");
+  badge.dispatchEvent(new win.MouseEvent("pointerenter", { bubbles: false }));
+  await sleep(30);
+  assert.ok(!badge.classList.contains("tsun-idle"), "hover brings the full badge back");
+  await sleep(5200);
+  assert.ok(!badge.classList.contains("tsun-idle"), "it stays awake while it is hovered");
+  badge.dispatchEvent(new win.MouseEvent("pointerleave", { bubbles: false }));
+  await sleep(5200);
+  assert.ok(badge.classList.contains("tsun-idle"), "it dims again once the pointer leaves");
+});
+
+test("a fainter ghost stage follows the first fade", async () => {
+  const { win, liveTimers } = await bootContent("", { hunaarEnabled: false, aiAutoOffMinutes: 0 });
+  await sleep(80);
+  const badge = win.document.getElementById("tsun-museai-badge");
+  assert.ok([...liveTimers.values()].includes(5000), "a 5 s fade timer is pending");
+  await sleep(5300);
+  assert.ok(badge.classList.contains("tsun-idle"));
+  assert.ok([...liveTimers.values()].includes(15000), "the 20 s ghost timer is pending");
+});
+
+test("a keypress on the badge keeps it awake", async () => {
+  const { win } = await bootContent("", { hunaarEnabled: false, aiAutoOffMinutes: 0 });
+  await sleep(80);
+  const badge = win.document.getElementById("tsun-museai-badge");
+  badge.classList.add("tsun-idle", "tsun-ghost");
+  badge.dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+  await sleep(40);
+  assert.ok(!badge.classList.contains("tsun-idle") && !badge.classList.contains("tsun-ghost"),
+    "nudging the badge wakes it");
+});
+
 test("a delayed click cannot fire after the extension is reloaded", async () => {
   const { win, chrome, harness, store } = await bootContent(HATCH_CARD, {
     hunaarEnabled: true, aiClickDelayMs: 800, aiAutoOffMinutes: 0

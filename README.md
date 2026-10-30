@@ -6,7 +6,7 @@
 
 **One switch. One badge. Approvals on muse.ai, handled.**
 
-<sub>`v11.0.0` · Manifest V3 · no runtime dependencies · monochrome by design</sub>
+<sub>`v11.1.0` · Manifest V3 · no runtime dependencies · monochrome by design</sub>
 
 </div>
 
@@ -34,12 +34,16 @@ The floating badge is the only UI on the page. It is **draggable anywhere**,
 | Click / `Enter` / `Space` | toggle automation |
 | Drag | move the badge; the spot is saved and restored on every Muse page |
 | `←` `→` `↑` `↓` (`Shift` = 3×) | nudge by 8 px |
+| Rest | dims 5 s after the last interaction, ghosts at 20 s |
+| Hover / focus | full badge straight back, and it stays awake while you are on it |
 | Popup → Badge `Reset` | back to the default corner |
 
 Position is clamped to the viewport on drag, on load, and on window resize, so
 a smaller window or a different screen can never strand it off-canvas. The badge
 also reports the truth: `ON`, `OFF`, or `RELOAD` when the extension was updated
 under a live tab.
+The position is written as an inline `!important` style, so no page stylesheet
+can pin the badge in place — dragging and `Reset` work on any page.
 
 ## Design
 
@@ -49,6 +53,7 @@ A deliberately narrow system — black ink on white, nothing else.
 - **The mark.** A geometric `T` + `S` on a black plate with one corner sliced off, echoing the TSun Studio logo. Vector at `icons/logo.svg`, rasterised for the toolbar.
 - **Honest small sizes.** At 16 px the two letters collapse into one bold `T`, because two glyphs become mush at that size.
 - **Hairline UI.** 1 px rules and borders, 8–10 px radii, one soft shadow on the badge only. No gradients, no glow, no pulse.
+- **Gets out of the way.** The badge dims to 35 % after 5 s of rest and to a 10 % ghost at 20 s; hover, focus or a drag restores it instantly, so it never sits on top of the video you are reviewing.
 - **Switch geometry.** Pill track, solid ink when on, 16 px knob. State is readable in greyscale.
 - **Accessible by default.** The badge is a real button (`role`, `tabindex`, `aria-pressed`, arrow-key nudging, visible focus ring); the popup's tab readout is a `role="status"` live region.
 
@@ -98,7 +103,7 @@ plain Python — no Pillow, no ImageMagick.
 
 ```bash
 npm ci        # jsdom, test-only
-npm test      # 28 jsdom tests on the real scripts
+npm test      # 36 jsdom tests on the real scripts
 npm run verify # manifest, files, PNG structure, popup ids, palette, branding
 npm run bench # idle cost of the content script
 npm run icons # regenerate icons/*.png
@@ -108,8 +113,12 @@ npm run icons # regenerate icons/*.png
 without an Allow button, shadow-DOM cards (including a root attached late),
 the no-document-sweep guard, the cooldown and three-attempt cap, badge
 accessibility, drag + remember + viewport clamping, arrow-key nudging, the
-auto-OFF timer, invalidated-extension behaviour (including a pending delayed
-click), and the popup's tab readout, selects, badge switch and storage writes.
+5 s fade and the 20 s ghost with hover wake, the auto-OFF timer,
+invalidated-extension behaviour (including a pending delayed click), and the
+popup's tab readout, selects, badge switch and storage writes.
+`tests/badge-css.test.js` boots the real `content.css` so the cascade is
+exercised: it fails if a stylesheet rule ever outranks the badge's inline
+position again, which is what made dragging and `Reset` look dead.
 
 ## Privacy
 
