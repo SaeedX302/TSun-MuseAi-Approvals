@@ -1,4 +1,4 @@
-/* TSun-MuseAi-Approvals — popup v11.0.0 */
+/* TSun-MuseAi-Approvals — popup v11.1.0 */
 
 const enabled=document.getElementById("enabled"), pub=document.getElementById("publicLinks");
 const state=document.getElementById("stateText"), footer=document.getElementById("footerText"), mode=document.getElementById("mode"), pillText=document.getElementById("statusPillText");

@@ -1,9 +1,11 @@
 /* TSun-MuseAi-Approvals — floating badge on muse.ai.
-   Monochrome only; the position comes from inline left/top set by content.js. */
+   Monochrome only; the position comes from inline left/top set by content.js,
+   so the fallback below must stay non-important or it would win the cascade
+   and pin the badge in place (drag and Reset would look broken). */
 #tsun-museai-badge {
   position: fixed !important;
-  left: 0 !important;
-  top: 96px !important;
+  left: 16px;
+  top: 96px;
   z-index: 2147483647 !important;
   display: flex !important;
   align-items: center !important;
@@ -71,4 +73,11 @@
 #tsun-museai-badge.tsun-on .tsun-state { background: #111111 !important; color: #ffffff !important; }
 #tsun-museai-badge.tsun-on .tsun-dot { background: #ffffff !important; border-color: #ffffff !important; }
 #tsun-museai-badge.tsun-stopped { opacity: 0.5 !important; cursor: default !important; }
+/* Rest: 5 s after the last interaction the badge dims, then turns into a
+   faint ghost at 20 s. Hover, focus or a drag always brings it back. */
+#tsun-museai-badge.tsun-idle { opacity: 0.35 !important; }
+#tsun-museai-badge.tsun-ghost { opacity: 0.1 !important; }
+#tsun-museai-badge:hover,
+#tsun-museai-badge:focus-visible,
+#tsun-museai-badge.tsun-dragging { opacity: 1 !important; }
 #tsun-museai-badge.tsun-hidden { display: none !important; }

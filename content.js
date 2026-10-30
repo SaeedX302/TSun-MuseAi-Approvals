@@ -1,5 +1,5 @@
 (() => {
-  /* TSun-MuseAi-Approvals v11.0.0 — approval helper for muse.ai.
+  /* TSun-MuseAi-Approvals v11.1.0 — approval helper for muse.ai.
      Legacy storage-key prefixes are kept on purpose so upgrades keep settings. */
   if (window.__tsunMuseAi) return;
   window.__tsunMuseAi = true;
@@ -22,6 +22,10 @@
   const DRAG_THRESHOLD = 4;
   const NUDGE_PX = 8;
   const BADGE_MARGIN = 16;
+  /* Rest behaviour: the badge dims 5 s after the last interaction and turns
+     into a faint ghost at 20 s; hover, focus or a drag wakes it again. */
+  const IDLE_FADE_MS = 5000;
+  const IDLE_GHOST_MS = 20000;
 
   let active = false;
   let publicApproval = false;
@@ -35,6 +39,9 @@
   let badge = null;
   let drag = null;
   let suppressClick = false;
+  let idleTimer = null;
+  let ghostTimer = null;
+  let badgeHovered = false;
   let scanTimer = null;
   let pollTimer = null;
   let autoOffTimer = null;
@@ -61,6 +68,7 @@
     clearTimeout(scanTimer); scanTimer = null;
     clearInterval(pollTimer); pollTimer = null;
     clearTimeout(autoOffTimer); autoOffTimer = null;
+    clearIdleTimers();
     try { if (observer) observer.disconnect(); } catch (_) {}
     if (!stopped) { stopped = true; paintBadge(); }
   }
@@ -251,13 +259,50 @@
     const x = w - size.w - BADGE_MARGIN;
     return { x, y: badgeAnchor === "bottom-right" ? h - size.h - BADGE_MARGIN : 96 };
   }
+  /* Fading rest state. Hovering, focusing or dragging the badge keeps it
+     fully visible; when the pointer leaves, the idle clock starts over. */
+  function clearIdleTimers() {
+    clearTimeout(idleTimer); idleTimer = null;
+    clearTimeout(ghostTimer); ghostTimer = null;
+  }
+  function setIdleStage(stage) {
+    if (!badge) return;
+    badge.classList.toggle("tsun-idle", stage === "idle");
+    badge.classList.toggle("tsun-ghost", stage === "ghost");
+  }
+  function badgeHot() {
+    if (badgeHovered || drag) return true;
+    const focused = document.activeElement;
+    return !!(badge && focused && badge.contains(focused));
+  }
+  function badgeAwake() {
+    clearIdleTimers();
+    setIdleStage("awake");
+  }
+  function scheduleIdle() {
+    clearIdleTimers();
+    if (!badge || !badgeVisible || stopped || badgeHot()) return;
+    idleTimer = setTimeout(() => {
+      idleTimer = null;
+      if (!badge || !badgeVisible || stopped || badgeHot()) return;
+      setIdleStage("idle");
+      ghostTimer = setTimeout(() => {
+        ghostTimer = null;
+        if (!badge || !badgeVisible || stopped || badgeHot()) return;
+        setIdleStage("ghost");
+      }, Math.max(0, IDLE_GHOST_MS - IDLE_FADE_MS));
+    }, IDLE_FADE_MS);
+  }
+
   function applyBadgeLayout() {
     if (!badge) return;
     badge.classList.toggle("tsun-hidden", !badgeVisible);
     if (!badgeVisible) return;
     const pos = clampOffset(badgeOffset || anchorOffset());
-    badge.style.left = pos.x + "px";
-    badge.style.top = pos.y + "px";
+    /* Inline !important wins over any page or stylesheet rule, so dragging and
+       Reset can always move the badge. */
+    badge.style.setProperty("left", pos.x + "px", "important");
+    badge.style.setProperty("top", pos.y + "px", "important");
   }
   function paintBadge() {
     if (!badge) return;
@@ -279,6 +324,8 @@
     if (stopped) return;
     active = !active;
     paintBadge();
+    badgeAwake();
+    scheduleIdle();
     storeSet({ hunaarEnabled: active }, () => {
       scheduleAutoOff(false);
       if (active) { lastShadowScanAt = 0; scheduleScan(0); }
@@ -289,6 +336,7 @@
   function onPointerDown(e) {
     if (stopped || (typeof e.button === "number" && e.button > 0)) return;
     suppressClick = false; // a fresh gesture always gets a fresh click
+    badgeAwake();
     const rect = badge.getBoundingClientRect();
     drag = { id: e.pointerId, startX: e.clientX, startY: e.clientY, originX: rect.left, originY: rect.top, moved: false };
     try { if (badge.setPointerCapture) badge.setPointerCapture(e.pointerId); } catch (_) {}
@@ -313,11 +361,14 @@
       suppressClick = true;
       storeSet({ aiBadgeOffset: badgeOffset });
     }
+    scheduleIdle();
   }
   function nudge(dx, dy) {
     const current = badgeOffset || clampOffset(anchorOffset());
     badgeOffset = clampOffset({ x: current.x + dx, y: current.y + dy });
     applyBadgeLayout();
+    badgeAwake();
+    scheduleIdle();
     storeSet({ aiBadgeOffset: badgeOffset });
   }
   function onBadgeKeydown(e) {
@@ -346,6 +397,11 @@
       toggleFromBadge();
     });
     badge.addEventListener("keydown", onBadgeKeydown);
+    /* Hover and focus hold the badge awake; leaving restarts the idle clock. */
+    badge.addEventListener("pointerenter", () => { badgeHovered = true; badgeAwake(); });
+    badge.addEventListener("pointerleave", () => { badgeHovered = false; scheduleIdle(); });
+    badge.addEventListener("focus", badgeAwake);
+    badge.addEventListener("blur", () => { badgeHovered = false; scheduleIdle(); });
     /* Moves are tracked on the window so a fast drag keeps working even when
        the pointer leaves the badge (pointer capture is best-effort). */
     window.addEventListener("pointermove", onPointerMove, true);
@@ -353,6 +409,8 @@
     window.addEventListener("pointercancel", onPointerUp, true);
     document.body.appendChild(badge);
     paintBadge();
+    badgeAwake();
+    scheduleIdle();
   }
 
   function recordClick(type) {
@@ -443,6 +501,8 @@
       log("settings: main=" + active + ", publicLinks=" + publicApproval + ", delay=" + clickDelayMs + "ms, autoOff=" + autoOffMinutes + "min, badge=" + (badgeVisible ? (badgeOffset ? "custom" : badgeAnchor) : "hidden"));
       makeBadge();
       paintBadge();
+      badgeAwake();
+      scheduleIdle();
       scheduleAutoOff(false);
       if (loadedOnce && active && !wasActive) lastShadowScanAt = 0;
       loadedOnce = true;
@@ -465,6 +525,9 @@
     let relevant = false;
     const mayWalk = active && !document.hidden;
     for (const r of records) {
+      /* Ignore our own painting: the badge moves its own style attribute on
+         every drag frame, which must not feed scans back into the page. */
+      if (badge && (r.target === badge || (badge.contains && badge.contains(r.target)))) continue;
       if (r.type === "childList") {
         for (const n of r.addedNodes) {
           if (n.nodeType !== 1) continue;
